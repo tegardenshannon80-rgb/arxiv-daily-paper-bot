@@ -1,0 +1,35 @@
+{
+  "2601.00001": {
+    "title": "Sequential Recommendation with Periodic User Behavior",
+    "translation": "基于周期用户行为的序列推荐",
+    "summary": "A lightweight sequential recommender that models periodic user activity for e-commerce.",
+    "url": "https://arxiv.org/abs/2601.00001",
+    "arxiv_id": "2601.00001",
+    "categories": "cs.IR",
+    "pub_date": "2026-11-01 08:00:00",
+    "rerank_relevance_score": 9,
+    "is_fine_ranked": true
+  },
+  "2601.00002": {
+    "title": "Efficient CTR Prediction with Long Behavior Sequences",
+    "translation": "基于长行为序列的高效 CTR 预测",
+    "summary": "A new method for CTR prediction with long user behavior sequences and low inference cost.",
+    "url": "https://arxiv.org/abs/2601.00002",
+    "arxiv_id": "2601.00002",
+    "categories": "cs.IR, cs.LG",
+    "pub_date": "2026-11-01 08:10:00",
+    "rerank_relevance_score": 8,
+    "is_fine_ranked": true
+  },
+  "2601.00003": {
+    "title": "LLM-based Ranking for Content Recommendation",
+    "translation": "基于大模型排序的内容推荐",
+    "summary": "Using LLMs as re-rankers for personalized content recommendation.",
+    "url": "https://arxiv.org/abs/2601.00003",
+    "arxiv_id": "2601.00003",
+    "categories": "cs.IR, cs.CL",
+    "pub_date": "2026-11-01 08:20:00",
+    "rerank_relevance_score": 7,
+    "is_fine_ranked": true
+  }
+}
