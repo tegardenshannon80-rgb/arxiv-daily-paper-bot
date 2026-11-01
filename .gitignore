@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+feishu_preview_*.json
+mock_*.json
