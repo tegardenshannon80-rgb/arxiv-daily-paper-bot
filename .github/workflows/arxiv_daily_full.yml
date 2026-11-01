@@ -1,0 +1,181 @@
+# arXiv daily: fetch -> rough rank -> DeepSeek fine rank/translate -> Feishu -> GitHub Pages
+name: arxiv_daily_full
+
+on:
+  schedule:
+    # 03:23 UTC = 11:23 Beijing. arXiv's new batch is available by then.
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: arxiv-daily-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+  TARGET_CATEGORYS: "cs.IR,cs.CL,cs.CV"
+  PYTHONPATH: ${{ github.workspace }}
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  process_and_deploy_arxiv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check required secrets
+        env:
+          FEISHU_URL: ${{ secrets.FEISHU_URL }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          missing=0
+          if [ -z "$FEISHU_URL" ]; then
+            echo "::error::FEISHU_URL secret is not set"
+            missing=1
+          fi
+          if [ -z "$DEEPSEEK_API_KEY" ]; then
+            echo "::error::DEEPSEEK_API_KEY secret is not set"
+            missing=1
+          fi
+          exit "$missing"
+
+      - name: Fetch / rough rank / fine rank / translate
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          TARGET_CATEGORYS: ${{ env.TARGET_CATEGORYS }}
+          MAX_PAPERS: "100"
+          ARXIV_LOOKBACK_HOURS: "36"
+          ARXIV_PAGE_SIZE: "100"
+          # 注意：MAX_PAPERS 是每页大小，不是总量；用页数控制总量。
+          # 1/1/1 => 最多约 300 篇，粗排成本可控；要更多覆盖再调到 2/2/2。
+          ARXIV_MAX_PAGES: "1"
+          ARXIV_CATEGORY_MAX_PAGES: "cs.IR:1,cs.CL:1,cs.CV:1"
+          ARXIV_REQUEST_INTERVAL: "10"
+          ARXIV_CATEGORY_INTERVAL: "30"
+          ARXIV_JITTER_SECONDS: "10"
+          ARXIV_CATEGORY_RETRY_ATTEMPTS: "2"
+          ARXIV_USE_DAILY_CACHE: "true"
+          ARXIV_RETRY_ATTEMPTS: "3"
+          ARXIV_RETRY_BASE_WAIT: "60"
+          ARXIV_RETRY_MAX_WAIT: "300"
+          ARXIV_API_BASE_URLS: "https://export.arxiv.org/api/query"
+          ROUGH_SCORE_THRESHOLD: "4"
+          RETURN_PAPERS: "20"
+        run: |
+          set -euo pipefail
+          max_attempts=3
+          for attempt in $(seq 1 "$max_attempts"); do
+            echo "🚀 arxiv.py attempt $attempt/$max_attempts"
+            if python -m paperBotV2.arxiv_daily.arxiv; then
+              echo "✅ arxiv.py succeeded"
+              exit 0
+            else
+              exit_code=$?
+            fi
+
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "❌ arxiv.py failed after $max_attempts attempts (exit=$exit_code)"
+              exit "$exit_code"
+            fi
+
+            if [ "$attempt" -eq 1 ]; then
+              wait_seconds=600
+            else
+              wait_seconds=1200
+            fi
+            echo "⏳ waiting $wait_seconds s before retry"
+            sleep "$wait_seconds"
+          done
+
+      - name: Generate HTML
+        run: |
+          cd paperBotV2/arxiv_daily
+          python generate_arxiv_html.py
+
+      - name: Mark HTML generated
+        run: |
+          python - <<'PY'
+          from paperBotV2.arxiv_daily.status import update_today_output
+          print("HTML generated status updated:", update_today_output(html_generated=True))
+          PY
+
+      - name: Check generated files
+        run: |
+          echo "HTML:"
+          ls -la paperBotV2/arxiv_daily/output/ || true
+          echo "Data:"
+          ls -la paperBotV2/arxiv_daily/data/ || true
+
+      - name: Send Feishu cards
+        id: send
+        continue-on-error: true
+        env:
+          FEISHU_URL: ${{ secrets.FEISHU_URL }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          RETURN_PAPERS: "20"
+          FEISHU_CHUNK_SIZE: "6"
+          TARGET_CATEGORYS: ${{ env.TARGET_CATEGORYS }}
+        run: |
+          python -m paperBotV2.arxiv_daily.feishu_sender
+
+      - name: Commit generated files
+        if: always()
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "github-actions"
+          for d in data status output; do
+            if [ -d "paperBotV2/arxiv_daily/$d" ]; then
+              git add "paperBotV2/arxiv_daily/$d"
+            fi
+          done
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: update arXiv daily data and HTML"
+          git push
+
+      - name: Deploy GitHub Pages
+        if: always() && hashFiles('paperBotV2/arxiv_daily/output/**') != ''
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./paperBotV2/arxiv_daily/output
+          destination_dir: arxiv_daily
+          publish_branch: gh-pages
+          commit_message: "docs: update arXiv daily HTML"
+
+      - name: Upload debug artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arxiv-daily-debug-${{ github.run_id }}
+          path: |
+            paperBotV2/arxiv_daily/data
+            paperBotV2/arxiv_daily/status
+            paperBotV2/arxiv_daily/output
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Fail if Feishu send failed
+        if: steps.send.outcome == 'failure'
+        run: |
+          echo "::error::Feishu send failed; data/HTML were still committed. Check the 'send' step log."
+          exit 1
