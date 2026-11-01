@@ -6,6 +6,13 @@ on:
     # 03:23 UTC = 11:23 Beijing. arXiv's new batch is available by then.
     - cron: '23 3 * * *'
   workflow_dispatch:
+    inputs:
+      categories:
+        description: "分类，逗号分隔（默认 cs.IR,cs.CL,cs.CV）"
+        default: "cs.IR,cs.CL,cs.CV"
+      lookback_hours:
+        description: "回看小时数（默认 36；首次验证可用 168）"
+        default: "36"
 
 concurrency:
   group: arxiv-daily-${{ github.ref }}
@@ -59,9 +66,9 @@ jobs:
       - name: Fetch / rough rank / fine rank / translate
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-          TARGET_CATEGORYS: ${{ env.TARGET_CATEGORYS }}
+          TARGET_CATEGORYS: ${{ inputs.categories || env.TARGET_CATEGORYS }}
           MAX_PAPERS: "100"
-          ARXIV_LOOKBACK_HOURS: "36"
+          ARXIV_LOOKBACK_HOURS: ${{ inputs.lookback_hours || '36' }}
           ARXIV_PAGE_SIZE: "100"
           # 注意：MAX_PAPERS 是每页大小，不是总量；用页数控制总量。
           # 1/1/1 => 最多约 300 篇，粗排成本可控；要更多覆盖再调到 2/2/2。
@@ -131,7 +138,7 @@ jobs:
           FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
           RETURN_PAPERS: "20"
           FEISHU_CHUNK_SIZE: "6"
-          TARGET_CATEGORYS: ${{ env.TARGET_CATEGORYS }}
+          TARGET_CATEGORYS: ${{ inputs.categories || env.TARGET_CATEGORYS }}
         run: |
           python -m paperBotV2.arxiv_daily.feishu_sender
 
