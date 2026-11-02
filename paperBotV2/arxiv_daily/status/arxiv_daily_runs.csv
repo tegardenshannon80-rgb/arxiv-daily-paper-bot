@@ -1,3 +1,4 @@
 date,run_id,run_attempt,workflow,trigger,status,stage,started_at,ended_at,duration_seconds,total_papers,cs_ir_papers,cs_cl_papers,cs_cv_papers,rough_rank_total,rough_rank_success,rough_rank_failed,fine_rank_total,fine_rank_success,fine_rank_failed,avg_rough_score,avg_fine_score,daily_json_written,html_generated,error
 20261101,41300791775,1,arxiv_daily_full,workflow_dispatch,success,completed,2026-11-01T11:11:48+00:00,2026-11-01T11:12:59+00:00,71,0,0,0,0,0,0,0,0,0,0,0,0,false,true,
 20261101,41301279173,1,arxiv_daily_full,workflow_dispatch,success,completed,2026-11-01T11:18:25+00:00,2026-11-01T11:19:00+00:00,35,100,100,,,100,100,0,20,20,0,5.36,8.25,true,true,
+20261102,41436620709,1,arxiv_daily_full,schedule,success,completed,2026-11-02T11:25:00+00:00,2026-11-02T11:26:12+00:00,72,0,0,0,0,0,0,0,0,0,0,0,0,false,true,
