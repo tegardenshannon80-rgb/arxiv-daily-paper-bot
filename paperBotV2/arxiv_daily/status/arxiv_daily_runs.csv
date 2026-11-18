@@ -18,3 +18,4 @@ date,run_id,run_attempt,workflow,trigger,status,stage,started_at,ended_at,durati
 20261116,43859988884,1,arxiv_daily_full,schedule,success,completed,2026-11-16T11:41:57+00:00,2026-11-16T11:43:08+00:00,71,0,0,0,0,0,0,0,0,0,0,0,0,false,true,
 20261117,44079602284,1,arxiv_daily_full,schedule,failed,fetch,2026-11-17T12:03:56+00:00,2026-11-17T12:12:54+00:00,538,14,14,0,,0,0,0,0,0,0,0,0,false,false,arXiv API 请求多次失败: 429 error from https://export.arxiv.org/api/query
 20261117,44079602284,1,arxiv_daily_full,schedule,success,completed,2026-11-17T12:22:55+00:00,2026-11-17T12:32:48+00:00,593,200,14,86,100,193,0,193,0,0,0,0,0,true,true,
+20261118,44299088320,1,arxiv_daily_full,schedule,success,completed,2026-11-18T11:56:00+00:00,2026-11-18T12:01:26+00:00,326,186,16,70,100,179,0,179,0,0,0,0,0,true,true,
